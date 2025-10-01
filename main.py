@@ -9,6 +9,11 @@ from bs4 import BeautifulSoup
 import icalendar
 import re
 
+SCHEDULE_HTML_URL = "https://www.di.uoa.gr/schedule/25-26/timetable_PPS_winter2526.html"
+TZ = ZoneInfo("Europe/Athens")
+SEMESTER_START = datetime(2025, 9, 29, tzinfo=TZ)
+SEMESTER_END = datetime(2026, 1, 9, tzinfo=TZ)
+
 @dataclass
 class Lesson:
     name: str
@@ -38,117 +43,133 @@ class Lesson:
     def __repr__(self) -> str:
         return f"Lesson {{\"{self.name}\", {self.semester}, {self.profs}, {self.start}:+{self.duration}, {self.day}, {self.room}}}"
 
+class Schedule:
+    _lessons: List[Lesson]
 
-def parse_schedule_html(html: str) -> List[Lesson]:
-    soup = BeautifulSoup(html, 'html.parser')
+    def __init__(self, lessons: Iterable[Lesson]):
+        self._lessons = list(lessons)
 
-    def parse_day_from_trs(trs):
-        day = next(trs).select("td > b > font")[0].string
+    @staticmethod
+    def parse_html(html: str) -> Self:
+        soup = BeautifulSoup(html, 'html.parser')
 
-        room_tr = next(trs)
-        room_tds = iter(room_tr.select("td"))
-        _ = next(room_tds) # First cell is "Ώρα/Αιθ."
-        col_to_room_map = list(map(lambda x: x.select("b > font")[0].string, room_tds))
+        def parse_day(trs):
+            day = next(trs).select("td > b > font")[0].string
 
-        for i in range(12):
-            tds = iter(next(trs).select("td"))
+            room_tr = next(trs)
+            room_tds = iter(room_tr.select("td"))
+            _ = next(room_tds)
+            col_to_room_map = list(map(lambda x: x.select("b > font")[0].string, room_tds))
 
-            time_slot_str = next(tds).select("font")[0].string
+            for i in range(12):
+                tds = iter(next(trs).select("td"))
 
-            def parse_time(s: str) -> timedelta:
-                hours, minutes = map(int, map(str.strip, s.split(":")))
-                return timedelta(hours=hours, minutes=minutes)
+                time_slot_str = next(tds).select("font")[0].string
 
-            time_slot_start, time_slot_end = map(parse_time, time_slot_str.split("-"))
+                def parse_time(s: str) -> timedelta:
+                    hours, minutes = map(int, map(str.strip, s.split(":")))
+                    return timedelta(hours=hours, minutes=minutes)
 
-            for i, td in enumerate(tds):
-                desc = td.select("font")[0]
-                for child in desc.select("br"):
-                    child.replace_with(" ")
-                desc = desc.get_text().strip()
+                time_slot_start, time_slot_end = map(parse_time, time_slot_str.split("-"))
 
-                if len(desc) == 0:
-                    continue
+                for i, td in enumerate(tds):
+                    desc = td.select("font")[0]
+                    for child in desc.select("br"):
+                        child.replace_with(" ")
+                    desc = desc.get_text().strip()
 
-                start = time_slot_start
-                end = time_slot_end - time_slot_start
-                room = col_to_room_map[i]
-                lesson = Lesson.parse(desc, start, end, day, room)
-                lessons.append(lesson)
+                    if len(desc) == 0:
+                        continue
 
-    lessons = []
+                    start = time_slot_start
+                    end = time_slot_end - time_slot_start
+                    room = col_to_room_map[i]
+                    lesson = Lesson.parse(desc, start, end, day, room)
+                    lessons.append(lesson)
 
-    trs = iter(soup.find_all("tr"))
+        lessons = []
+        trs = iter(soup.find_all("tr"))
 
-    for i in range(7):
-        try:
-            parse_day_from_trs(trs)
-            # Below each day, there are 2 empty <tr> tags.
-            _ = next(trs)
-            _ = next(trs)
-        except StopIteration:
-            break
+        for i in range(7):
+            try:
+                parse_day(trs)
+                _ = next(trs)
+                _ = next(trs)
+            except StopIteration:
+                break
 
-    return lessons
+        return Schedule(lessons)
 
-lessons = parse_schedule_html(open("timetable_PPS_winter2526.html", "r").read())
+    def to_ics(self) -> bytes:
+        now = datetime.now(UTC)
 
-now = datetime.now(UTC)
+        c = Calendar()
+        c.add("VERSION", "2.0")
+        c.add("PRODID", "-//threadexio//dit-schedule//EN")
+        c.add("X-WR-CALNAME", "EvilCal")
 
-c = Calendar()
-c.add("VERSION", "2.0")
-c.add("PRODID", "-//EvilCorp//EvilCal 69//EN")
-c.add("X-WR-CALNAME", "EvilCal")
+        semester_start = SEMESTER_START
+        semester_end = SEMESTER_END
 
-semester_start = datetime(2025, 9, 29, tzinfo=ZoneInfo("Europe/Athens")) # TODO: fetch this automatically
-semester_end = semester_start + timedelta(days=+102) # TODO: see above
-
-for lesson in lessons:
-    day_offset = 0
-    match lesson.day:
-        case "Δευτέρα":
+        for lesson in self._lessons:
             day_offset = 0
-        case "Τρίτη":
-            day_offset = 1
-        case "Τετάρτη":
-            day_offset = 2
-        case "Πέμπτη":
-            day_offset = 3
-        case "Παρασκευή":
-            day_offset = 4
+            match lesson.day:
+                case "Δευτέρα":
+                    day_offset = 0
+                case "Τρίτη":
+                    day_offset = 1
+                case "Τετάρτη":
+                    day_offset = 2
+                case "Πέμπτη":
+                    day_offset = 3
+                case "Παρασκευή":
+                    day_offset = 4
 
-    semester_start_weekday = semester_start.weekday()
+            semester_start_weekday = semester_start.weekday()
 
-    if day_offset < semester_start_weekday:
-        day_offset += 7
+            if day_offset < semester_start_weekday:
+                day_offset += 7
 
-    semester_first_week_start = semester_start - timedelta(days=semester_start_weekday)
-    day_start = semester_first_week_start + timedelta(days=day_offset)
+            semester_first_week_start = semester_start - timedelta(days=semester_start_weekday)
+            day_start = semester_first_week_start + timedelta(days=day_offset)
 
-    start = day_start + lesson.start
-    end = start + lesson.duration
+            start = day_start + lesson.start
+            end = start + lesson.duration
 
-    e = Event()
-    e.add("SUMMARY", lesson.name)
-    e.add("DESCRIPTION", f"In {lesson.room} with {", ".join(lesson.profs) if len(lesson.profs) > 2 else " and ".join(lesson.profs)}.")
-    e.add("UID", md5(str(lesson).encode("utf-8")).hexdigest())
-    e.add("CREATED", now)
-    e.add("DTSTART", start)
-    e.add("DTEND", end)
+            e = Event()
+            e.add("SUMMARY", lesson.name)
+            e.add("DESCRIPTION", f"In {lesson.room} with {", ".join(lesson.profs) if len(lesson.profs) > 2 else " and ".join(lesson.profs)}.")
+            e.add("UID", md5(str(lesson).encode("utf-8")).hexdigest())
+            e.add("CREATED", now)
+            e.add("DTSTART", start)
+            e.add("DTEND", end)
 
-    e.add("SEQUENCE", 0)
-    e.add("RRULE", vRecur({"FREQ": ["WEEKLY"], "UNTIL": [semester_end]})) # TODO: remove count and cut off based on semester end date
+            e.add("SEQUENCE", 0)
+            e.add("RRULE", vRecur({"FREQ": ["WEEKLY"], "UNTIL": [semester_end]}))
 
-    a = Alarm()
-    a.add("ACTION", "DISPLAY")
-    a.add("TRIGGER", timedelta(minutes=-10))
-    a.add("DESCRIPTION", "Reminder: Lesson in 10 minutes")
-    e.add_component(a)
+            a = Alarm()
+            a.add("ACTION", "DISPLAY")
+            a.add("TRIGGER", timedelta(minutes=-10))
+            a.add("DESCRIPTION", "Reminder: Lesson in 10 minutes")
+            e.add_component(a)
 
-    e.add("URL", "https://di.uoa.gr")
-    e.add("LOCATION", "Department of Informatics and Telecommunications, Zografou 161 22, Greece")
-    e.add("TRANSP", "OPAQUE")
-    c.add_component(e)
+            e.add("URL", "https://di.uoa.gr")
+            e.add("LOCATION", "Department of Informatics and Telecommunications, Zografou 161 22, Greece")
+            e.add("TRANSP", "OPAQUE")
+            c.add_component(e)
 
-with open("out.ics", "wb") as f:
-    f.write(c.to_ical())
+        return c.to_ical()
+
+    def __iter__(self):
+        return iter(self._lessons)
+
+###############################################################################
+
+with open("./timetable_PPS_winter2526.html", "r") as f:
+    schedule = Schedule.parse_html(f.read())
+
+schedule = filter(lambda x: x.semester == "3ο" or x.name == "Θεωρία Αριθμών", schedule)
+schedule = Schedule(schedule)
+
+with open("./out.ics", "wb") as f:
+    f.write(schedule.to_ics())
