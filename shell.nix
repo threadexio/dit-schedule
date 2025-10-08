@@ -6,8 +6,9 @@ with pkgs;
 mkShell {
   packages = [
     bun
+    nodePackages.prettier
     vscode-langservers-extracted
     typescript-language-server
-    dprint
+    vue-language-server
   ];
 }

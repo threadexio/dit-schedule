@@ -16,6 +16,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "ical-generator": "^9.0.0",
     "vue": "^3.5.22"
   },
   "devDependencies": {
