@@ -5,7 +5,8 @@ with pkgs;
 
 mkShell {
   packages = [
-    bun
+    nodejs
+    nodePackages.npm
     nodePackages.prettier
     vscode-langservers-extracted
     typescript-language-server
