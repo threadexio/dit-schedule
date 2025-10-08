@@ -10,5 +10,9 @@ mkShell {
     vscode-langservers-extracted
     typescript-language-server
     vue-language-server
+    (python3.withPackages (p: with p; [
+      beautifulsoup4
+      requests
+    ]))
   ];
 }
