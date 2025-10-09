@@ -29,13 +29,15 @@ init()
 
 <template>
   <div>
-    <div>
-      <label for="semester">Semester:</label>
-      <select v-model="selected_schedule">
-        <option v-if="manifest !== undefined" v-for="x in manifest.schedules" :value="x">
-          {{ x.name }}
-        </option>
-      </select>
+    <div class="header">
+      <div class="semester-selector">
+        <label for="semester">Semester:</label>
+        <select v-model="selected_schedule">
+          <option v-if="manifest !== undefined" v-for="x in manifest.schedules" :value="x">
+            {{ x.name }}
+          </option>
+        </select>
+      </div>
     </div>
     <Schedule
       v-if="selected_schedule_manifest !== undefined"
@@ -44,4 +46,30 @@ init()
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.header {
+  box-sizing: border-box;
+  padding: 0.5em;
+  width: 100%;
+  height: 3em;
+
+  background: rgba(0, 0, 0, 0.5);
+  border-bottom: 1px solid rgb(72, 72, 74);
+
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.semester-selector > label {
+  padding-right: 0.5em;
+}
+
+.semester-selector > select {
+  background: rgb(36, 36, 38);
+  color: unset;
+  border: 1px solid rgb(72, 72, 74);
+  border-radius: 5px;
+  padding: 0.1em;
+}
+</style>

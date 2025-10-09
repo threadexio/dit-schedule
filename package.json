@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "ical-generator": "^9.0.0",
+    "uuid": "^13.0.0",
     "vue": "^3.5.22"
   },
   "devDependencies": {
