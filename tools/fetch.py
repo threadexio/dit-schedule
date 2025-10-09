@@ -29,7 +29,13 @@ class Schedule:
     @staticmethod
     def parse_html(html: str) -> Self:
         def parse_day(trs) -> List[Lesson]:
-            day = next(trs).select("td > b > font")[0].string.strip()
+            while True:
+                try:
+                    day = next(trs).select("td > b > font")[0].string.strip()
+                    break
+                except IndexError:
+                    continue
+            
             rooms = list(map(lambda x: x.select("b > font")[0].string.strip(), skip(iter(next(trs).select("td")), 1)))
 
             def parse_slot(trs) -> List[Lesson]:
@@ -49,7 +55,10 @@ class Schedule:
 
                 def parse_lesson(x) -> Optional[Lesson]:
                     td, room = x
-                    desc = list(td.select("font")[0].children)
+                    try:
+                        desc = list(td.select("font")[0].children)
+                    except IndexError:
+                        return None
                     if len(desc) != 5:
                         return None
 

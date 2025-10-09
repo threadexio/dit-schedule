@@ -1,6 +1,14 @@
 {
   "schedules": [
     {
+      "name": "Χειμερινό 2024-2025",
+      "path": "winter-24-25.json"
+    },
+    {
+      "name": "Εαρινό 2024-2025",
+      "path": "spring-24-25.json"
+    },
+    {
       "name": "Χειμερινό 2025-2026",
       "path": "winter-25-26.json"
     }
