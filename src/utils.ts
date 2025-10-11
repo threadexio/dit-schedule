@@ -33,7 +33,7 @@ export function shift(
   return new Date(x)
 }
 
-export function* enumerate<T>(iterable: Iterable<T>, start: number = 0, step: number = 0) {
+export function* enumerate<T>(iterable: Iterable<T>, start: number = 0, step: number = 1) {
   let i = start
   for (const item of iterable) {
     yield [i, item] as const
