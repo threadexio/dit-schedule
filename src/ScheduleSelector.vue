@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { defineProps, defineModel } from 'vue'
 import { enumerate } from './utils.ts'
 import { Manifest } from './schedule.ts'
 
