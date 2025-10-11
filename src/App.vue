@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { enumerate } from './utils.ts'
 import { Manifest, Schedule } from './schedule.ts'
+
 import ScheduleComponent from './Schedule.vue'
+import ScheduleSelector from './ScheduleSelector.vue'
 
 const manifest = ref<undefined | Manifest>(undefined)
 
@@ -26,22 +27,14 @@ init()
 <template>
   <div>
     <div class="header">
-      <div class="semester-selector">
-        <label for="semester">Semester:</label>
-        <select v-if="manifest !== undefined" v-model="selected_schedule">
-          <option v-for="[i, x] in enumerate(manifest.schedules)" :key="i" :value="x">
-            {{ x.name }}
-          </option>
-        </select>
-        <select v-else>
-          <option>No schedules</option>
-        </select>
-      </div>
+      <ScheduleSelector :manifest="manifest" v-model="selected_schedule" />
     </div>
-    <ScheduleComponent
-      v-if="selected_schedule !== undefined && selected_schedule.fetched()"
-      :schedule="selected_schedule"
-    />
+    <div>
+      <ScheduleComponent
+        v-if="selected_schedule !== undefined && selected_schedule.fetched()"
+        :schedule="selected_schedule"
+      />
+    </div>
   </div>
 </template>
 
@@ -58,17 +51,5 @@ init()
   display: flex;
   flex-direction: row;
   align-items: center;
-}
-
-.semester-selector > label {
-  padding-right: 0.5em;
-}
-
-.semester-selector > select {
-  background: rgb(36, 36, 38);
-  color: unset;
-  border: 1px solid rgb(72, 72, 74);
-  border-radius: 5px;
-  padding: 0.1em;
 }
 </style>
