@@ -1,22 +1,17 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
 import { enumerate, download } from './utils.ts'
 import { Schedule } from './schedule.ts'
+import { Share } from './share.ts'
 
 const props = defineProps<{
   schedule: Schedule
 }>()
 
-const selected_lessons = ref(new Set<number>())
+const lessons = defineModel<Set<number>>('lessons', { required: true })
 
-watch(
-  () => props.schedule,
-  () => selected_lessons.value.clear(),
-)
-
-function toggleSelectedLesson(i: number) {
-  if (selected_lessons.value.has(i)) selected_lessons.value.delete(i)
-  else selected_lessons.value.add(i)
+function toggleLesson(i: number) {
+  if (lessons.value.has(i)) lessons.value.delete(i)
+  else lessons.value.add(i)
 }
 
 function formatMsToHM(ms: number): string {
@@ -26,25 +21,33 @@ function formatMsToHM(ms: number): string {
 
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
 }
+
+function doShare() {
+  const share = new Share(props.schedule.id, lessons.value)
+
+  const url = new URL(window.location.toString())
+  url.searchParams.set('share', share.toString())
+  navigator.clipboard.writeText(url.toString())
+  alert(url.toString())
+}
+
+function doExportIcs() {
+  download(props.schedule.toICS(lessons.value), {
+    type: 'text/calendar',
+    filename: 'dit-schedule.ics',
+  })
+}
 </script>
 
 <template>
   <div>
     <div class="header">
-      <button
-        @click="
-          download(schedule.toICS(selected_lessons), {
-            type: 'text/calendar',
-            filename: 'dit-schedule.ics',
-          })
-        "
-      >
-        Export to ICS
-      </button>
+      <button @click="doShare()">Share</button>
+      <button @click="doExportIcs()">Export to ICS</button>
     </div>
     <ul class="lessons">
-      <li v-for="[i, x] in enumerate(schedule.lessons)" :key="i" @click="toggleSelectedLesson(i)">
-        <input type="checkbox" v-model="selected_lessons" :value="i" />
+      <li v-for="[i, x] in enumerate(schedule.lessons)" :key="i" @click="toggleLesson(i)">
+        <input type="checkbox" v-model="lessons" :value="i" />
         <span class="lesson-name">{{ x.name }}</span>
         <ul>
           <li>{{ x.semester }}</li>

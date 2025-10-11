@@ -1,6 +1,6 @@
 import * as ical from 'ical-generator'
 import * as uuid from 'uuid'
-import { map, filter_map, shift } from './utils.ts'
+import { enumerate, map, filter_map, shift } from './utils.ts'
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -12,7 +12,7 @@ export class Manifest {
   public schedules: Schedule[]
 
   constructor(data: ManifestData) {
-    this.schedules = Array.from(map(data.schedules, (x) => new Schedule(x)))
+    this.schedules = Array.from(map(enumerate(data.schedules), ([i, x]) => new Schedule(i, x)))
   }
 
   static async fetch(): Promise<Manifest> {
@@ -36,6 +36,7 @@ interface ScheduleManifestData {
 }
 
 export class Schedule {
+  public id: number
   public name: string
   public path: string
 
@@ -45,13 +46,14 @@ export class Schedule {
     lessons: Lesson[]
   }
 
-  constructor(data: ManifestScheduleData) {
+  constructor(id: number, data: ManifestScheduleData) {
+    this.id = id
     this.name = data.name
     this.path = data.path
   }
 
-  static async fetch(data: ManifestScheduleData): Promise<Schedule> {
-    const x = new Schedule(data)
+  static async fetch(id: number, data: ManifestScheduleData): Promise<Schedule> {
+    const x = new Schedule(id, data)
     await x.fetch()
     return x
   }
