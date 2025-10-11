@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { shift, enumerate, map, download } from './utils.ts'
-import { Schedule, Lesson } from './schedule.ts'
+import { enumerate, download } from './utils.ts'
+import { Schedule } from './schedule.ts'
 
 const props = defineProps<{
   schedule: Schedule
@@ -11,7 +11,7 @@ const selected_lessons = ref(new Set<number>())
 
 watch(
   () => props.schedule,
-  (final, prev) => selected_lessons.value.clear(),
+  () => selected_lessons.value.clear(),
 )
 
 function toggleSelectedLesson(i: number) {
@@ -43,7 +43,7 @@ function formatMsToHM(ms: number): string {
       </button>
     </div>
     <ul class="lessons">
-      <li v-for="[i, x] in enumerate(schedule.lessons)" @click="toggleSelectedLesson(i)">
+      <li v-for="[i, x] in enumerate(schedule.lessons)" :key="i" @click="toggleSelectedLesson(i)">
         <input type="checkbox" v-model="selected_lessons" :value="i" />
         <span class="lesson-name">{{ x.name }}</span>
         <ul>

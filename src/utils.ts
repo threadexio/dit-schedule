@@ -36,7 +36,8 @@ export function shift(
 export function* enumerate<T>(iterable: Iterable<T>, start: number = 0, step: number = 0) {
   let i = start
   for (const item of iterable) {
-    yield [i++, item] as const
+    yield [i, item] as const
+    i += step
   }
 }
 

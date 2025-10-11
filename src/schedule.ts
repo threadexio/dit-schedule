@@ -51,7 +51,7 @@ export class Schedule {
   }
 
   static async fetch(data: ManifestScheduleData): Promise<Schedule> {
-    let x = new Schedule(data)
+    const x = new Schedule(data)
     await x.fetch()
     return x
   }

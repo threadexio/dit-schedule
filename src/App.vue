@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { enumerate } from './utils.ts'
 import { Manifest, Schedule } from './schedule.ts'
 import ScheduleComponent from './Schedule.vue'
 
 const manifest = ref<undefined | Manifest>(undefined)
 
 const selected_schedule = ref<undefined | Schedule>(undefined)
-watch(selected_schedule, async (final, prev) => {
+watch(selected_schedule, async (final) => {
   if (final !== undefined) {
     await final.fetch()
   }
@@ -27,10 +28,13 @@ init()
     <div class="header">
       <div class="semester-selector">
         <label for="semester">Semester:</label>
-        <select v-model="selected_schedule">
-          <option v-if="manifest !== undefined" v-for="x in manifest.schedules" :value="x">
+        <select v-if="manifest !== undefined" v-model="selected_schedule">
+          <option v-for="[i, x] in enumerate(manifest.schedules)" :key="i" :value="x">
             {{ x.name }}
           </option>
+        </select>
+        <select v-else>
+          <option>No schedules</option>
         </select>
       </div>
     </div>
