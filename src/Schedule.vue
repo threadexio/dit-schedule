@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { shift, enumerate, map } from './utils.ts'
-import * as uuid from 'uuid'
-import * as ical from 'ical-generator'
-import * as types from './types.ts'
+import { shift, enumerate, map, download } from './utils.ts'
+import { Schedule, Lesson } from './schedule.ts'
 
 const props = defineProps<{
-  schedule: types.ScheduleManifest
+  schedule: Schedule
 }>()
 
-const selected_lessons = ref(new Set())
+const selected_lessons = ref(new Set<number>())
 
 watch(
   () => props.schedule,
@@ -28,125 +26,21 @@ function formatMsToHM(ms: number): string {
 
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
 }
-
-function exportIcs() {
-  const now = new Date()
-
-  const lessons = map(selected_lessons.value.values(), (i: number) => props.schedule.lessons[i])
-
-  const semester_start = new Date(props.schedule.start)
-  const semester_end = new Date(props.schedule.end)
-
-  const events: ical.ICalEventData[] = Array.from(
-    map(lessons, (lesson: types.Lesson) => {
-      let day_offset
-      switch (lesson.day) {
-        case 'Κυριακή': {
-          day_offset = 0
-          break
-        }
-
-        case 'Δευτέρα': {
-          day_offset = 1
-          break
-        }
-        case 'Τρίτη': {
-          day_offset = 2
-          break
-        }
-        case 'Τετάρτη': {
-          day_offset = 3
-          break
-        }
-        case 'Πέμπτη': {
-          day_offset = 4
-          break
-        }
-        case 'Παρασκευή': {
-          day_offset = 5
-          break
-        }
-
-        case 'Σάββατο': {
-          day_offset = 6
-          break
-        }
-
-        default: {
-          throw new Error('unknown day')
-        }
-      }
-
-      if (day_offset < semester_start.getDay()) {
-        day_offset += 7
-      }
-
-      day_offset -= semester_start.getDay()
-
-      const start = shift(semester_start, { days: day_offset, ms: lesson.start })
-      const end = shift(start, { ms: lesson.duration })
-
-      return {
-        id: uuid.v4(),
-        summary: lesson.name,
-        description: `In ${lesson.room} with ${lesson.profs.join(', ')}.`,
-        created: now,
-        start: start,
-        end: end,
-
-        alarms: [
-          {
-            type: ical.ICalAlarmType.display,
-            description: `Reminder: ${lesson.name} in 10 minutes.`,
-            trigger: 10 * 60,
-            repeat: null,
-            interval: null,
-            relatesTo: null,
-            attach: null,
-            attendees: [],
-          },
-        ],
-
-        sequence: 0,
-        repeating: {
-          freq: ical.ICalEventRepeatingFreq.WEEKLY,
-          until: semester_end,
-        },
-
-        allDay: false,
-        attachments: [],
-        attendees: [],
-        url: 'https://di.uoa.gr',
-        location: 'Department of Informatics and Telecommunications, Zografou 161 22, Greece',
-      }
-    }),
-  )
-
-  const cal = new ical.ICalCalendar({
-    name: 'DIT Schedule',
-    description: 'DIT Schedule',
-    prodId: '-//threadexio//dit-schedule//EN',
-    timezone: 'Europe/Athens',
-    url: 'https://di.uoa.gr',
-    events: events,
-  })
-
-  const ics = cal.toString()
-  const blob = new Blob([ics], { type: 'text/calendar' })
-  const url = URL.createObjectURL(blob)
-
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'dit-schedule.ics'
-  a.click()
-  URL.revokeObjectURL(url)
-}
 </script>
 
 <template>
   <div>
     <div class="header">
-      <button @click="exportIcs()">Export to ICS</button>
+      <button
+        @click="
+          download(schedule.toICS(selected_lessons), {
+            type: 'text/calendar',
+            filename: 'dit-schedule.ics',
+          })
+        "
+      >
+        Export to ICS
+      </button>
     </div>
     <ul class="lessons">
       <li v-for="[i, x] in enumerate(schedule.lessons)" @click="toggleSelectedLesson(i)">

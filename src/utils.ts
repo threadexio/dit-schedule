@@ -40,8 +40,38 @@ export function* enumerate<T>(iterable: Iterable<T>, start: number = 0, step: nu
   }
 }
 
-export function* map<T>(iterable: Iterable<T>, f: Function, thisArg: any = null) {
+export function* map<T, U>(iterable: Iterable<T>, f: (e: T) => U) {
   for (const item of iterable) {
-    yield f.call(thisArg, item)
+    yield f(item)
   }
+}
+
+export function* filter<T>(iterable: Iterable<T>, f: (e: T) => boolean) {
+  for (const item of iterable) {
+    if (f(item)) {
+      yield item
+    }
+  }
+}
+
+export function* filter_map<T, U>(iterable: Iterable<T>, f: (e: T) => U | undefined) {
+  for (const item of iterable) {
+    const e = f(item)
+    if (e !== undefined) {
+      yield e
+    }
+  }
+}
+
+export function download(data: string, opts: { type: string; filename: string; charset?: string }) {
+  const charset = opts.charset || 'utf-8'
+
+  const a = document.createElement('a')
+  a.download = opts.filename
+  a.href = `data:${opts.type};charset=${charset},${encodeURIComponent(data)}`
+
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
 }
