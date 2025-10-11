@@ -2,9 +2,6 @@ name: Deploy to Github Pages
 
 on:
   push:
-    branch:
-      - master
-      - ci
   workflow_dispatch:
 
 permissions:
@@ -42,6 +39,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/production'
     needs: build
 
     steps:
