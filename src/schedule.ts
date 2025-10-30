@@ -1,6 +1,6 @@
 import * as ical from 'ical-generator'
 import * as uuid from 'uuid'
-import { enumerate, map, filter_map, shift } from './utils.ts'
+import { enumerate, map, filter_map, shift, fetchCompressedJson } from './utils.ts'
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -16,8 +16,7 @@ export class Manifest {
   }
 
   static async fetch(): Promise<Manifest> {
-    const res = await fetch('schedules/manifest.json')
-    const data = (await res.json()) as ManifestData
+    const data = await fetchCompressedJson<ManifestData>('schedules/manifest.json')
     return new Manifest(data)
   }
 }
@@ -65,13 +64,12 @@ export class Schedule {
   async fetch(): Promise<void> {
     if (this._manifest !== undefined) return
 
-    const res = await fetch(`schedules/${this.path}`)
-    const data2 = (await res.json()) as ScheduleManifestData
+    const data = await fetchCompressedJson<ScheduleManifestData>(`schedules/${this.path}`)
 
     this._manifest = {
-      start: new Date(data2.start),
-      end: new Date(data2.end),
-      lessons: Array.from(map(data2.lessons, (x) => new Lesson(x))),
+      start: new Date(data.start),
+      end: new Date(data.end),
+      lessons: Array.from(map(data.lessons, (x) => new Lesson(x))),
     }
   }
 
