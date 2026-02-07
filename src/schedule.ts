@@ -1,6 +1,6 @@
 import * as ical from 'ical-generator'
 import * as uuid from 'uuid'
-import { enumerate, map, filter_map, shift } from './utils.ts'
+import { enumerate, map, shift, any } from './utils.ts'
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -30,9 +30,10 @@ interface ManifestScheduleData {
 }
 
 interface ScheduleManifestData {
-  start: number
-  end: number
+  start: string
+  end: string
   lessons: LessonData[]
+  holidays: HolidayData[]
 }
 
 export class Schedule {
@@ -44,6 +45,7 @@ export class Schedule {
     start: Date
     end: Date
     lessons: Lesson[]
+    holidays: Holiday[]
   }
 
   constructor(id: number, data: ManifestScheduleData) {
@@ -72,6 +74,7 @@ export class Schedule {
       start: new Date(data2.start),
       end: new Date(data2.end),
       lessons: Array.from(map(data2.lessons, (x) => new Lesson(x))),
+      holidays: Array.from(map(data2.holidays, (x) => new Holiday(x))),
     }
   }
 
@@ -87,67 +90,98 @@ export class Schedule {
     return this._manifest!.lessons
   }
 
-  toICS(lessons: Set<number>): string {
+  get holidays(): Array<Holiday> {
+    return this._manifest!.holidays
+  }
+
+  toICS(selected_lessons: Set<number>): string {
     const now = new Date()
 
+    const lessons = []
+    for (const [id, lesson] of enumerate(this.lessons)) {
+      if (!selected_lessons.has(id)) {
+        continue
+      }
+
+      let week_offset = 0
+      while (true) {
+        const day_offset = -this.start.getDay() + lesson.day.index
+
+        const start = shift(this.start, { weeks: week_offset, days: day_offset, ms: lesson.start })
+        const end = shift(start, { ms: lesson.duration })
+
+        if (start < this.start) {
+          continue
+        }
+
+        if (this.end <= start || this.end <= end) {
+          break
+        }
+
+        const is_holiday = any(this.holidays, (x) => x.contains(start) || x.contains(end))
+
+        if (!is_holiday) {
+          // TODO: remove, only show relevant for debugging
+          if (start.getUTCMonth() == 1) {
+            console.log('======================')
+            console.log(lesson)
+            console.log(start)
+            console.log(end)
+          }
+
+          lessons.push({
+            start,
+            end,
+            data: lesson,
+          })
+        }
+
+        week_offset += 1
+      }
+    }
+
     const events: ical.ICalEventData[] = Array.from(
-      map(
-        filter_map(lessons.values(), (i) => this.lessons[i]),
-        (lesson) => {
-          let day_offset = lesson.day.index
-          if (day_offset < this.start.getDay()) {
-            day_offset += 7
-          }
+      map(lessons, (x) => {
+        return {
+          id: uuid.v4(),
+          summary: x.data.name,
+          description: `In ${x.data.room} with ${x.data.profs.join(', ')}.`,
+          created: now,
+          start: x.start,
+          end: x.end,
 
-          day_offset -= this.start.getDay()
-
-          const start = shift(this.start, { days: day_offset, ms: lesson.start })
-          const end = shift(start, { ms: lesson.duration })
-
-          return {
-            id: uuid.v4(),
-            summary: lesson.name,
-            description: `In ${lesson.room} with ${lesson.profs.join(', ')}.`,
-            created: now,
-            start: start,
-            end: end,
-
-            alarms: [
-              {
-                type: ical.ICalAlarmType.display,
-                description: `Reminder: ${lesson.name} in 10 minutes.`,
-                trigger: 10 * 60,
-                repeat: null,
-                interval: null,
-                relatesTo: null,
-                attach: null,
-                attendees: [],
-              },
-            ],
-
-            sequence: 0,
-            repeating: {
-              freq: ical.ICalEventRepeatingFreq.WEEKLY,
-              until: shift(this.end, { days: 1 }),
+          alarms: [
+            {
+              type: ical.ICalAlarmType.display,
+              description: `Reminder: ${x.data.name} in 10 minutes.`,
+              trigger: 10 * 60,
+              repeat: null,
+              interval: null,
+              relatesTo: null,
+              attach: null,
+              attendees: [],
             },
+          ],
 
-            allDay: false,
-            attachments: [],
-            attendees: [],
-            url: 'https://di.uoa.gr',
-            location: 'Department of Informatics and Telecommunications, Zografou 161 22, Greece',
-          }
-        },
-      ),
+          sequence: 0,
+          repeating: null,
+
+          allDay: false,
+          attachments: [],
+          attendees: [],
+          url: 'https://di.uoa.gr',
+          location: 'Department of Informatics and Telecommunications, Zografou 161 22, Greece',
+        }
+      }),
     )
 
     const cal = new ical.ICalCalendar({
       name: 'DIT Schedule',
       description: 'DIT Schedule',
-      prodId: '-//threadexio//dit-schedule//EN',
+      prodId: '-//threadexio/dit-schedule//EN',
       timezone: 'Europe/Athens',
       url: 'https://di.uoa.gr',
-      events: events,
+      events,
     })
 
     return cal.toString()
@@ -243,5 +277,26 @@ export class Day {
     } else {
       return str
     }
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+interface HolidayData {
+  start: string
+  end: string
+}
+
+export class Holiday {
+  public start: Date
+  public end: Date
+
+  constructor(data: HolidayData) {
+    this.start = new Date(data.start)
+    this.end = new Date(data.end)
+  }
+
+  contains(x: Date): boolean {
+    return this.start <= x && x <= this.end
   }
 }
