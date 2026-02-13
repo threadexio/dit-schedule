@@ -13,8 +13,10 @@ const lessons = defineModel<Set<number>>('lessons', { required: true })
 const visibilityName = ref<string | undefined>()
 const visibilitySemester = ref<string | undefined>()
 
-watch(visibilitySemester, () => {
-  visibilityName.value = undefined
+watch(visibilitySemester, (final) => {
+  if (final !== undefined) {
+    visibilityName.value = undefined
+  }
 })
 
 function isLessonVisibleByName(lesson: Lesson): boolean {
