@@ -10,35 +10,6 @@ const props = defineProps<{
 
 const lessons = defineModel<Set<number>>('lessons', { required: true })
 
-function toggleLesson(i: number) {
-  if (lessons.value.has(i)) lessons.value.delete(i)
-  else lessons.value.add(i)
-}
-
-function formatMsToHM(ms: number): string {
-  const hours = ms / (60 * 60 * 1000)
-  ms -= hours * 60 * 60 * 1000
-  const minutes = ms / (60 * 1000)
-
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
-}
-
-function doShare() {
-  const share = new Share(props.schedule.id, lessons.value)
-
-  const url = new URL(window.location.toString())
-  url.searchParams.set('share', share.toString())
-  navigator.clipboard.writeText(url.toString())
-  alert(url.toString())
-}
-
-function doExportIcs() {
-  download(props.schedule.toICS(lessons.value), {
-    type: 'text/calendar',
-    filename: 'dit-schedule.ics',
-  })
-}
-
 const visibilityName = ref<string | undefined>()
 const visibilitySemester = ref<string | undefined>()
 
@@ -60,11 +31,54 @@ function isLessonVisibleBySemester(lesson: Lesson): boolean {
 function isLessonVisible(lesson: Lesson) {
   return isLessonVisibleByName(lesson) && isLessonVisibleBySemester(lesson)
 }
+
+function toggleLesson(i: number) {
+  if (lessons.value.has(i)) lessons.value.delete(i)
+  else lessons.value.add(i)
+}
+
+function formatMsToHM(ms: number): string {
+  const hours = ms / (60 * 60 * 1000)
+  ms -= hours * 60 * 60 * 1000
+  const minutes = ms / (60 * 1000)
+
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+}
+
+function doSelectAll() {
+  for (const [i, _] of filter(enumerate(props.schedule.lessons), ([_, x]) => isLessonVisible(x))) {
+    lessons.value.add(i)
+  }
+}
+
+function doClearAll() {
+  for (const [i, _] of filter(enumerate(props.schedule.lessons), ([_, x]) => isLessonVisible(x))) {
+    lessons.value.delete(i)
+  }
+}
+
+function doShare() {
+  const share = new Share(props.schedule.id, lessons.value)
+
+  const url = new URL(window.location.toString())
+  url.searchParams.set('share', share.toString())
+  navigator.clipboard.writeText(url.toString())
+  alert(url.toString())
+}
+
+function doExportIcs() {
+  download(props.schedule.toICS(lessons.value), {
+    type: 'text/calendar',
+    filename: 'dit-schedule.ics',
+  })
+}
 </script>
 
 <template>
   <div>
     <div class="header glass">
+      <button @click="doSelectAll()">Select All</button>
+      <button @click="doClearAll()">Clear All</button>
       <button @click="doShare()">Share</button>
       <button @click="doExportIcs()">Export to ICS</button>
     </div>
