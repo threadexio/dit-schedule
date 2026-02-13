@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { enumerate, download } from './utils.ts'
-import { Schedule } from './schedule.ts'
+import { ref, watch } from 'vue'
+import { enumerate, download, filter, filter_map, implies } from './utils.ts'
+import { Schedule, Lesson } from './schedule.ts'
 import { Share } from './share.ts'
 
 const props = defineProps<{
@@ -37,16 +38,79 @@ function doExportIcs() {
     filename: 'dit-schedule.ics',
   })
 }
+
+const visibilityName = ref<string | undefined>()
+const visibilitySemester = ref<string | undefined>()
+
+watch(visibilitySemester, () => {
+  visibilityName.value = undefined
+})
+
+function isLessonVisibleByName(lesson: Lesson): boolean {
+  return implies(visibilityName.value !== undefined, visibilityName.value === lesson.name)
+}
+
+function isLessonVisibleBySemester(lesson: Lesson): boolean {
+  return implies(
+    visibilitySemester.value !== undefined,
+    visibilitySemester.value === lesson.semester,
+  )
+}
+
+function isLessonVisible(lesson: Lesson) {
+  return isLessonVisibleByName(lesson) && isLessonVisibleBySemester(lesson)
+}
 </script>
 
 <template>
   <div>
     <div class="header">
+      <div>
+        <label>Filter by semester:</label>
+        <select v-model="visibilitySemester">
+          <option :value="undefined">All</option>
+          <option
+            v-for="[i, x] in enumerate(
+              Array.from(new Set(schedule.lessons.map((x) => x.semester))).sort(),
+            )"
+            :key="i"
+            :value="x"
+          >
+            {{ x }}
+          </option>
+        </select>
+      </div>
+      <div>
+        <label>Filter by name:</label>
+        <select v-model="visibilityName">
+          <option :value="undefined">All</option>
+          <option
+            v-for="[i, x] in enumerate(
+              Array.from(
+                new Set(
+                  filter_map(schedule.lessons, (x) =>
+                    isLessonVisibleBySemester(x) ? x.name : undefined,
+                  ),
+                ),
+              ).sort(),
+            )"
+            :key="i"
+            :value="x"
+          >
+            {{ x }}
+          </option>
+        </select>
+      </div>
+
       <button @click="doShare()">Share</button>
       <button @click="doExportIcs()">Export to ICS</button>
     </div>
     <ul class="lessons">
-      <li v-for="[i, x] in enumerate(schedule.lessons)" :key="i" @click="toggleLesson(i)">
+      <li
+        v-for="[i, x] in filter(enumerate(schedule.lessons), ([i, x]) => isLessonVisible(x))"
+        :key="i"
+        @click="toggleLesson(i)"
+      >
         <input type="checkbox" v-model="lessons" :value="i" />
         <span class="lesson-name">{{ x.name }}</span>
         <ul>
@@ -79,6 +143,10 @@ function doExportIcs() {
   align-items: center;
 }
 
+.header > * {
+  padding: 1em;
+}
+
 .header > button {
   height: 100%;
 
@@ -86,11 +154,30 @@ function doExportIcs() {
   background: none;
   border: none;
   color: unset;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .header > button:hover {
   color: rgb(0, 145, 255);
   cursor: pointer;
+}
+
+.header > div > label {
+  font-size: 0.8em;
+  padding-right: 0.5em;
+}
+
+.header > div > select {
+  background: rgb(36, 36, 38);
+  color: rgb(229, 229, 234);
+  border: 1px solid rgb(72, 72, 74);
+  border-radius: 5px;
+  padding: 0.1em;
+
+  width: 10em;
 }
 
 .lessons {

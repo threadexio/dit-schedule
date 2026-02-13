@@ -101,3 +101,7 @@ export function download(data: string, opts: { type: string; filename: string; c
   a.click()
   document.body.removeChild(a)
 }
+
+export function implies(a: boolean, b: boolean): boolean {
+  return (a && b) || !a
+}
