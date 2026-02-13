@@ -64,7 +64,27 @@ function isLessonVisible(lesson: Lesson) {
 
 <template>
   <div>
-    <div class="header">
+    <div class="header glass">
+      <button @click="doShare()">Share</button>
+      <button @click="doExportIcs()">Export to ICS</button>
+    </div>
+    <ul class="lessons">
+      <li
+        v-for="[i, x] in filter(enumerate(schedule.lessons), ([i, x]) => isLessonVisible(x))"
+        :key="i"
+        @click="toggleLesson(i)"
+      >
+        <input type="checkbox" v-model="lessons" :value="i" />
+        <span class="lesson-name">{{ x.name }}</span>
+        <ul>
+          <li>{{ x.semester }}</li>
+          <li>with {{ x.profs.join(', ') }}</li>
+          <li>every {{ x.day }}</li>
+          <li>from {{ formatMsToHM(x.start) }} to {{ formatMsToHM(x.start + x.duration) }}</li>
+        </ul>
+      </li>
+    </ul>
+    <div class="footer glass">
       <div>
         <label>Filter by semester:</label>
         <select v-model="visibilitySemester">
@@ -101,30 +121,16 @@ function isLessonVisible(lesson: Lesson) {
           </option>
         </select>
       </div>
-
-      <button @click="doShare()">Share</button>
-      <button @click="doExportIcs()">Export to ICS</button>
     </div>
-    <ul class="lessons">
-      <li
-        v-for="[i, x] in filter(enumerate(schedule.lessons), ([i, x]) => isLessonVisible(x))"
-        :key="i"
-        @click="toggleLesson(i)"
-      >
-        <input type="checkbox" v-model="lessons" :value="i" />
-        <span class="lesson-name">{{ x.name }}</span>
-        <ul>
-          <li>{{ x.semester }}</li>
-          <li>with {{ x.profs.join(', ') }}</li>
-          <li>every {{ x.day }}</li>
-          <li>from {{ formatMsToHM(x.start) }} to {{ formatMsToHM(x.start + x.duration) }}</li>
-        </ul>
-      </li>
-    </ul>
   </div>
 </template>
 
 <style scoped>
+.glass {
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: brightness(80%) saturate(50%) blur(8px);
+}
+
 .header {
   position: sticky;
   top: 0%;
@@ -132,11 +138,8 @@ function isLessonVisible(lesson: Lesson) {
   padding: 0.5em;
   width: 100%;
   height: 3em;
-
-  background: rgba(0, 0, 0, 0.1);
-  backdrop-filter: brightness(80%) saturate(50%) blur(8px);
-  border-bottom: 1px solid rgb(72, 72, 74);
   z-index: 999;
+  border-bottom: 1px solid rgb(72, 72, 74);
 
   display: flex;
   flex-direction: row;
@@ -149,38 +152,12 @@ function isLessonVisible(lesson: Lesson) {
 
 .header > button {
   height: 100%;
-
   font-size: 0.8em;
-  background: none;
-  border: none;
-  color: unset;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.header > button:hover {
-  color: rgb(0, 145, 255);
-  cursor: pointer;
 }
 
 .header > div > label {
   font-size: 0.8em;
   padding-right: 0.5em;
-}
-
-.header > div > select {
-  background: rgb(36, 36, 38);
-  color: rgb(229, 229, 234);
-  border: 1px solid rgb(72, 72, 74);
-  border-radius: 5px;
-  padding: 0.1em;
-
-  width: 10em;
-}
-
-.lessons {
 }
 
 .lessons > li {
@@ -199,5 +176,42 @@ function isLessonVisible(lesson: Lesson) {
   margin-left: 0.5em;
   font-size: 1.25em;
   font-weight: bold;
+}
+
+.footer {
+  position: sticky;
+  bottom: 0%;
+  box-sizing: border-box;
+  padding: 0.5em;
+  width: 100%;
+  z-index: 999;
+  border-top: 1px solid rgb(72, 72, 74);
+
+  display: flex;
+  flex-direction: row;
+  justify-content: start;
+  align-items: center;
+
+  overflow-x: clip;
+}
+
+.footer > * {
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+}
+
+.footer > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: start;
+  align-items: center;
+}
+
+.footer > div > label {
+  padding-right: 0.5em;
+}
+
+.footer > div > select {
+  width: 10em;
 }
 </style>

@@ -1,0 +1,33 @@
+html {
+  color: rgb(229, 229, 234);
+  background: rgb(28, 28, 30);
+
+  font-size: 12pt;
+  font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+}
+
+select {
+  background: rgb(36, 36, 38);
+  color: rgb(229, 229, 234);
+  border: 1px solid rgb(72, 72, 74);
+  border-radius: 5px;
+  padding: 0.1em;
+}
+
+button {
+  background: none;
+  border: none;
+  color: unset;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+button:hover {
+  color: rgb(0, 145, 255);
+  cursor: pointer;
+}
