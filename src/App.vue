@@ -37,13 +37,41 @@ async function init() {
     }
   }
 
+  const saved_selected_schedule = localStorage['selected_schedule']
+  if (saved_selected_schedule !== undefined) {
+    const id = parseInt(saved_selected_schedule)
+    if (!isNaN(id)) {
+      selected_schedule.value = manifest.value.schedules[id]
+      done = true
+    }
+  }
+
   if (!done) {
     selected_schedule.value = manifest.value.schedules[l - 1]
   }
 
-  watch(selected_schedule, () => {
+  const saved_selected_lessons = localStorage['selected_lessons']
+  if (saved_selected_lessons !== undefined) {
+    selected_lessons.value = new Set(JSON.parse(saved_selected_lessons))
+  }
+
+  watch(selected_schedule, (final) => {
     selected_lessons.value.clear()
+
+    if (final !== undefined) {
+      localStorage['selected_schedule'] = `${final.id}`
+    } else {
+      localStorage.removeItem('selected_schedule')
+    }
   })
+
+  watch(
+    selected_lessons,
+    (final) => {
+      localStorage['selected_lessons'] = JSON.stringify(Array.from(final))
+    },
+    { deep: true },
+  )
 }
 
 init()
