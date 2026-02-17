@@ -141,6 +141,9 @@ def parse_schedule_html(html: str) -> List[Lesson]:
                 components = map(str.strip, filter(lambda x: isinstance(x, str), cell.find("font")))
                 try:
                     name = next(components)
+                    if name == "ΔΕΣΜΕΥΜΕΝΗ":
+                        continue
+
                     semester = next(components)
                     profs = map(str.strip, next(components).split(","))
                 except StopIteration:
