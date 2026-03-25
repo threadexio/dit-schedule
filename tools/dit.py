@@ -2,7 +2,7 @@
 from dataclasses import dataclass, asdict
 from contextlib import closing
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
+from datetime import datetime
 from itertools import *
 from functools import *
 from typing import *
@@ -74,29 +74,10 @@ class Lesson:
     room: str
 
 @dataclass
-class Holiday:
-    start: str
-    end: str
-
-    @staticmethod
-    def parse(s: str) -> Self:
-        components = list(map(datetime.fromisoformat, s.split("/", 1)))
-
-        if len(components) == 2:
-            return Holiday(components[0].isoformat(), components[1].isoformat())
-        elif len(components) == 1:
-            start = components[0]
-            end = start + timedelta(1)
-            return Holiday(start.isoformat(), end.isoformat())
-        else:
-            raise ValueError("invalid format for Holiday")
-
-@dataclass
 class Schedule:
     start: str
     end: str
     lessons: List[Lesson]
-    holidays: List[str]
 
 def parse_schedule_html(html: str) -> List[Lesson]:
     TIME_SLOTS = 12
@@ -171,7 +152,6 @@ class New(Command):
         parser.add_argument("--semester-start", type=datetime.fromisoformat, help="Start of the semester. (ISO format)", required=True)
         parser.add_argument("--semester-end", type=datetime.fromisoformat, help="End of the semester. (ISO format)", required=True)
         parser.add_argument("--schedule-uri", type=str, help="URI of the HTML schedule file", required=True)
-        parser.add_argument("--holiday", type=str, action="append", help="No lessons on these days")
         parser.add_argument("-o", "--out", type=str, help="Write the manifest to this path.", required=True)
 
     @staticmethod
@@ -182,9 +162,8 @@ class New(Command):
 
         start = args.semester_start.isoformat()
         end = args.semester_end.isoformat()
-        holidays = list(map(Holiday.parse, args.holiday or []))
 
-        schedule = Schedule(start, end, lessons, holidays)
+        schedule = Schedule(start, end, lessons)
 
         with closing(open_or_default(args.out, "w", lambda: sys.stdout)) as out:
             json.dump(asdict(schedule), out, ensure_ascii=False, indent=2)

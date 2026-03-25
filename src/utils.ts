@@ -6,7 +6,6 @@ export function shift(
     minutes?: number
     hours?: number
     days?: number
-    weeks?: number
   },
 ): Date {
   let x = t.getTime()
@@ -29,10 +28,6 @@ export function shift(
 
   if (by.days !== undefined) {
     x += by.days * 24 * 60 * 60 * 1000
-  }
-
-  if (by.weeks !== undefined) {
-    x += by.weeks * 7 * 24 * 60 * 60 * 1000
   }
 
   return new Date(x)
@@ -67,26 +62,6 @@ export function* filter_map<T, U>(iterable: Iterable<T>, f: (e: T) => U | undefi
       yield e
     }
   }
-}
-
-export function any<T>(iterable: Iterable<T>, f: (e: T) => boolean): boolean {
-  for (const item of iterable) {
-    if (f(item)) {
-      return true
-    }
-  }
-
-  return false
-}
-
-export function all<T>(iterable: Iterable<T>, f: (e: T) => boolean): boolean {
-  for (const item of iterable) {
-    if (!f(item)) {
-      return false
-    }
-  }
-
-  return true
 }
 
 export function download(data: string, opts: { type: string; filename: string; charset?: string }) {
